@@ -1,40 +1,63 @@
-import express from "express"
-import morgan from "morgan"
-const app = express()
-const PORT = 4000
+import express from "express";
+import morgan from "morgan";
+import "dotenv/config";
+import mongoose from "mongoose";
+import cors from "cors";
+import userRoutes from "./routers/users.js";
+import { authenticateUser } from "./middleware/authentication.js";
+import nodemailer from "nodemailer";
+import multer from "multer";
 
-app.use(morgan("tiny"))
+const upload = multer({ dest: "uploads/" });
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_EMAIL,
+    pass: process.env.GMAIL_PASSWORD,
+  },
+});
 
-function middleware(req, res, next){
-    console.log(Date.now())
-    next()
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+app.use(cors());
+app.use(morgan("tiny"));
+app.use(express.json());
+
+if (!process.env.MONGODBURI || !process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+  console.error("Error: Missing required environment variables.");
+  process.exit(1);
 }
 
+mongoose
+  .connect(process.env.MONGODBURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  });
 
-app.use(middleware);
+app.get("/", (req, res) => res.send("Server is running"));
 
-app.use(express.json())
+app.use("/user", userRoutes);
 
+app.get("/sendEmail", async (req, res) => {
+  try {
+    const info = await transporter.sendMail({
+      from: '"Muhammad Issa 👻" <issabaloach03@gmail.com>', // sender address
+      to: '"Issa Khan" <guddubaloach@gmail.com>', // list of receivers
+      subject: "Hello ✔", // Subject line
+      text: "Hello world?", // plain text body
+      html: "<b>Hello world?</b>", // HTML body
+    });
 
+    console.log("Message sent: %s", info.messageId);
+    res.send("Message sent: " + info.messageId);
+  } catch (error) {
+    console.error("Error sending email:", error);
+    res.status(500).send("Error sending email");
+  }
+});
 
-
-app.get("/", (req, res)=>{
-    console.log(req)
-    res.send("hello")
-})
-
-app.post("/", (req, res)=>{
-    res.send("post request")
-})
-
-app.put("/", (req, res)=>{
-    res.send("put request")
-})
-
-app.delete("/", (req, res)=>{
-    res.send("delete request")
-})
-
-
-app.listen(PORT, () => console.log("Server is running on PORT " + PORT))
+app.listen(PORT, () => console.log("Server is running on PORT " + PORT));
