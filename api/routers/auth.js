@@ -1,10 +1,10 @@
 import express from "express";
-import User from "../models/userModal.js";
+import User from "../api/models/userModal.js";
 import bcrypt from "bcrypt";
 import Joi from "joi";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
-import sendResponse from "../helpers/sendResponse.js";
+import sendResponse from "../api/helpers/sendResponse.js";
 const router = express.Router();
 
 const registerSchema = Joi.object({
