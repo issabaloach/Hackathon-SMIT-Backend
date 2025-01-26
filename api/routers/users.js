@@ -1,51 +1,69 @@
 import express from "express";
-import sendResponse from "../helpers/sendResponse.js";
-import jwt from "jsonwebtoken";
-import "dotenv/config";
-import { authenticateUser } from "../middleware/authentication.js";
-import User from "../models/userModal.js";
-
 const router = express.Router();
+import authController from "../controllers/authController.js";
+import authMiddleware from "../middleware/authentication.js";
+import Joi from "joi";
 
-router.get('/userInfo', authenticateUser, async (req, res) => {
-  try {
-    sendResponse(res, 200, req.user, false, "User Fetched Successfully");
-  }
-  catch (err) {
-    sendResponse(res, 500, null, true, "Something went wrong");
-  }
-}
-)
-
-
-router.put("/", authenticateUser, async (req, res) => {
-  try {
-    const { city, country } = req.body;
-    const user = await User.findOneAndUpdate(
-      {
-        _id: req.user._id,
-      },
-      {
-        city,
-        country,
-      },
-      { new: true }
-    ).exec(true);
-    sendResponse(res, 200, user, false, "User Updated Successfully");
-  } catch (err) {
-    sendResponse(res, 500, null, true, "Something went wrong");
-  }
+// User Registration Validation Schema
+const registerSchema = Joi.object({
+  cnic: Joi.string()
+    .pattern(/^\d{13}$/)
+    .required(),
+  email: Joi.string().email().required(),
+  name: Joi.string().trim().min(2).max(50).required(),
 });
 
-router.get("/myInfo", authenticateUser, async (req, res) => {
-  try {
-    const user = await User.findOne({
-      _id: req.user._id,
-    });
-    sendResponse(res, 200, user, false, "User Updated Successfully");
-  } catch (err) {
-    sendResponse(res, 500, null, true, "Something went wrong");
-  }
+// Login Validation Schema
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().required(),
 });
 
-export default router;
+// Change Password Validation Schema
+const changePasswordSchema = Joi.object({
+  newPassword: Joi.string()
+    .pattern(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/)
+    .required()
+    .messages({
+      "string.pattern.base":
+        "Password must be at least 8 characters, include letters, numbers, and special characters",
+    }),
+});
+
+// User Registration Route
+router.post(
+  "/register",
+  authMiddleware.validateInput(registerSchema),
+  authController.register
+);
+
+// User Login Route
+router.post(
+  "/login",
+  authMiddleware.validateInput(loginSchema),
+  authController.login
+);
+
+// Change Password Route
+router.post(
+  "/change-password",
+  authMiddleware.verifyToken,
+  authMiddleware.validateInput(changePasswordSchema),
+  authController.changePassword
+);
+
+// Get User Profile
+router.get(
+  "/profile",
+  authMiddleware.verifyToken,
+  authController.getUserProfile
+);
+
+// Update User Profile
+router.put(
+  "/profile",
+  authMiddleware.verifyToken,
+  authController.updateUserProfile
+);
+
+module.exports = router;
