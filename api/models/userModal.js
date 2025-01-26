@@ -1,35 +1,24 @@
-import mongoose from'mongoose';
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-// User Model
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
 const userSchema = new mongoose.Schema({
-  cnic: {
+  name: {
     type: String,
     required: true,
-    unique: true,
-    validate: {
-      validator: function(v) {
-        return /^\d{13}$/.test(v);
-      },
-      message: 'CNIC must be 13 digits'
-    }
+    trim: true
   },
   email: {
     type: String,
     required: true,
     unique: true,
     lowercase: true,
-    validate: {
-      validator: function(v) {
-        return /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(v);
-      },
-      message: 'Invalid email format'
-    }
+    trim: true
   },
-  name: {
+  cnic: {
     type: String,
     required: true,
-    trim: true
+    unique: true
   },
   password: {
     type: String,
@@ -43,8 +32,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
-}, { timestamps: true });
+});
 
 // Password hashing middleware
 userSchema.pre('save', async function(next) {
@@ -59,19 +52,20 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Generate authentication token
+// Method to generate authentication token
 userSchema.methods.generateAuthToken = function() {
   return jwt.sign(
     { 
-      _id: this._id, 
-      email: this.email, 
+      id: this._id, 
+      email: this.email,
       role: this.role 
     }, 
     process.env.JWT_SECRET, 
-    { expiresIn: '24h' }
+    { expiresIn: '1d' }
   );
 };
 
+// Prevent overwriting the User model if already defined
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-
-module.exports = { User: mongoose.model('User', userSchema) };
+export default User;

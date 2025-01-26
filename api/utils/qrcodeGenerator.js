@@ -1,26 +1,22 @@
-import QRCode from'qrcode';
-import nodemailer from 'nodemailer';
+import QRCode from 'qrcode'
 import path from 'path';
-import fs from 'fs';
-
-// QR Code Generator Utility
+import fs from 'fs'
 const qrCodeGenerator = {
   async generate(data) {
     try {
-      // Create directory if not exists
-      const qrDir = path.join(__dirname, '../uploads/qrcodes');
-      await fs.mkdir(qrDir, { recursive: true });
+      // Create uploads directory if it doesn't exist
+      const uploadDir = path.join(__dirname, '../uploads/qrcodes');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
 
       // Generate unique filename
       const filename = `qr_${Date.now()}.png`;
-      const filepath = path.join(qrDir, filename);
+      const filepath = path.join(uploadDir, filename);
 
       // Generate QR Code
       await QRCode.toFile(filepath, JSON.stringify(data), {
-        errorCorrectionLevel: 'H',
-        type: 'png',
-        quality: 0.92,
-        margin: 1
+        errorCorrectionLevel: 'H'
       });
 
       // Return relative path
@@ -32,6 +28,4 @@ const qrCodeGenerator = {
   }
 };
 
-module.exports = {
-    qrCodeGenerator
-  };
+export default qrCodeGenerator

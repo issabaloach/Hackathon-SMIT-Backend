@@ -1,64 +1,46 @@
-import express from "express";
-const router = express.Router();
-import loanController from "../controllers/loanController.js";
-import authMiddleware from "../middleware/authentication.js";
-import Joi from "joi";
+// Loanrouter.js
+import express from 'express';
+import AuthMiddleware from '../middleware/authentication.js';
+import loanController from '../controllers/loanController.js';
+import loanValidationSchema from '../validation/loanValidationSchema.js'; // Import validation schema
 
-// Loan Calculation Validation Schema
-const loanCalculationSchema = Joi.object({
-  category: Joi.string().required(),
-  subcategory: Joi.string().required(),
-  amount: Joi.number().positive().required(),
-  period: Joi.number().min(1).max(5).required(),
-  initialDeposit: Joi.number().positive().required(),
-});
+const Loanrouter = express.Router();
 
-// Loan Request Validation Schema
-const loanRequestSchema = Joi.object({
-  category: Joi.string().required(),
-  subcategory: Joi.string().required(),
-  amount: Joi.number().positive().required(),
-  period: Joi.number().min(1).max(5).required(),
-  initialDeposit: Joi.number().positive().required(),
-  guarantors: Joi.array().items(Joi.string()).optional(),
-  documents: Joi.array().items(Joi.string()).optional(),
-});
-
-// Get Loan Categories
-router.get(
-  "/categories",
-  authMiddleware.verifyToken,
-  loanController.getLoanCategories
-);
-
-// Calculate Loan Details
-router.post(
-  "/calculate",
-  authMiddleware.verifyToken,
-  authMiddleware.validateInput(loanCalculationSchema),
+// Public Route: Calculate loan details
+Loanrouter.post(
+  '/calculate',
+  AuthMiddleware.validateInput(loanValidationSchema), // Validate input
   loanController.calculateLoan
 );
 
-// Submit Loan Request
-router.post(
-  "/request",
-  authMiddleware.verifyToken,
-  authMiddleware.validateInput(loanRequestSchema),
+// Public Route: Get loan categories
+Loanrouter.get(
+  '/categories',
+  loanController.getLoanCategories
+);
+
+// Authenticated Route: Submit loan request
+Loanrouter.post(
+  '/submit',
+  AuthMiddleware.verifyToken, // Verify JWT token
+  AuthMiddleware.validateInput(loanValidationSchema), // Validate input
   loanController.submitLoanRequest
 );
 
-// Get User's Loan Requests
-router.get(
-  "/my-requests",
-  authMiddleware.verifyToken,
-  loanController.getUserLoanRequests
+// Authenticated Route: Get user's loans
+Loanrouter.get(
+  '/my-loans',
+  AuthMiddleware.verifyToken, // Verify JWT token
+  loanController.getUserLoans
 );
 
-// Get Specific Loan Request Details
-router.get(
-  "/request/:id",
-  authMiddleware.verifyToken,
-  loanController.getLoanRequestDetails
+// Admin-Only Route: Update loan status
+Loanrouter.patch(
+  '/:loanId/status',
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.restrictToAdmin,
+  loanController.updateLoanStatus 
 );
 
-module.exports = router;
+
+export default Loanrouter;

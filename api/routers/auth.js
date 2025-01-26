@@ -1,64 +1,44 @@
-import express from "express";
-import User from "../api/models/userModal.js";
-import bcrypt from "bcrypt";
-import Joi from "joi";
-import jwt from "jsonwebtoken";
-import "dotenv/config";
-import sendResponse from "../api/helpers/sendResponse.js";
-const router = express.Router();
+import express from 'express';
+import authController from '../controllers/authController.js';
+import authMiddleware from '../middleware/authentication.js';
+import Register, { loginSchema, changePasswordSchema, validateRegister } from '../models/registerModal.js';
 
-const registerSchema = Joi.object({
-  email: Joi.string().email({
-    minDomainSegments: 2,
-    tlds: { allow: ["com", "net"] },
-  }),
-  password: Joi.string().min(6).required(),
-  fullname: Joi.string().min(3).max(30).required(),
-});
+const Authrouter = express.Router();
 
-const loginSchema = Joi.object({
-  email: Joi.string().email({
-    minDomainSegments: 2,
-    tlds: { allow: ["com", "net"] },
-  }),
-  password: Joi.string().min(6).required(),
-});
+// User Registration Route
+Authrouter.post(
+  '/register',
+  authMiddleware.validateInput(Register),  // Validate input using the Joi schema
+  authController.register  // Call the controller method for registration
+);
 
-router.post("/register", async (req, res) => {
-  const { error, value } = registerSchema.validate(req.body);
-  if (error) return sendResponse(res, 400, null, true, error.message);
-  const user = await User.findOne({ email: value.email });
-  if (user)
-    return sendResponse(
-      res,
-      403,
-      null,
-      true,
-      "User with this email already registered."
-    );
+// User Login Route
+Authrouter.post(
+  '/login',
+  authMiddleware.validateInput(loginSchema),  // Validate input for login
+  authController.login  // Call the login controller method
+);
 
-  const hashedPassword = await bcrypt.hash(value.password, 12);
-  value.password = hashedPassword;
+// Change Password Route
+Authrouter.post(
+  '/change-password',
+  authMiddleware.verifyToken,  // Verify the token for security
+  authMiddleware.validateInput(changePasswordSchema),  // Validate the new password
+  authController.changePassword  // Call the controller method to change the password
+);
 
-  let newUser = new User({ ...value });
-  newUser = await newUser.save();
+// Get User Profile Route
+Authrouter.get(
+  '/profile',
+  authMiddleware.verifyToken,  // Ensure user is authenticated
+  authController.getUserProfile  // Retrieve the user profile
+);
 
-  sendResponse(res, 201, newUser, false, "User Registered Successfully");
-});
+// Update User Profile Route
+Authrouter.put(
+  '/profile',
+  authMiddleware.verifyToken,  // Verify token for security
+  authController.updateUserProfile  // Update user profile information
+);
 
-router.post("/login", async (req, res) => {
-  const { error, value } = loginSchema.validate(req.body);
-  if (error) return sendResponse(res, 400, null, true, error.message);
-  const user = await User.findOne({ email: value.email }).lean();
-  if (!user)
-    return sendResponse(res, 403, null, true, "User is not registered.");
-
-  const isPasswordValid = await bcrypt.compare(value.password, user.password);
-  if (!isPasswordValid)
-    return sendResponse(res, 403, null, true, "Invalid Credentials.");
-
-  var token = jwt.sign(user, process.env.AUTH_SECRET);
-
-  sendResponse(res, 200, { user, token }, false, "User Loggedin Successfully");
-});
-export default router;
+export default Authrouter;

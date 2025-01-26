@@ -1,57 +1,67 @@
-import express from 'express'
-const router = express.Router();
-import adminController from'../controllers/adminController';
-import authMiddleware  from'../middleware/authMiddleware';
-import joi from 'joi'
+import express from "express"
+import adminController from "../controllers/adminController.js"
+import AuthMiddleware from "../middleware/authentication.js"
+import validateInput from "../middleware/validation.js"
+import Joi from "joi"
+
+const Adminrouter = express.Router()
 
 // Update Loan Status Validation Schema
 const updateLoanStatusSchema = Joi.object({
-  status: Joi.string().valid('APPROVED', 'REJECTED', 'IN_REVIEW').required(),
-  comments: Joi.string().optional()
-});
+  status: Joi.string().valid("APPROVED", "REJECTED", "IN_REVIEW").required(),
+  comments: Joi.string().optional().max(500),
+})
 
 // Filter Applications Validation Schema
 const filterApplicationsSchema = Joi.object({
   city: Joi.string().optional(),
   status: Joi.string().optional(),
-  category: Joi.string().optional()
-});
+  category: Joi.string().optional(),
+  page: Joi.number().optional().default(1),
+  limit: Joi.number().optional().default(10),
+})
 
 // Get All Loan Applications
-router.get('/applications', 
-  authMiddleware.verifyToken,
-  authMiddleware.checkRole(['admin']),
-  adminController.getAllApplications
-);
+Adminrouter.get(
+  "/applications",
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.restrictToAdmin,
+  adminController.getAllApplications,
+)
 
 // Filter Loan Applications
-router.post('/applications/filter', 
-  authMiddleware.verifyToken,
-  authMiddleware.checkRole(['admin']),
-  authMiddleware.validateInput(filterApplicationsSchema),
-  adminController.filterApplications
-);
+Adminrouter.post(
+  "/applications/filter",
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.restrictToAdmin,
+  validateInput(filterApplicationsSchema),
+  adminController.filterApplications,
+)
 
 // Update Loan Application Status
-router.put('/applications/:id/status', 
-  authMiddleware.verifyToken,
-  authMiddleware.checkRole(['admin']),
-  authMiddleware.validateInput(updateLoanStatusSchema),
-  adminController.updateLoanStatus
-);
+Adminrouter.put(
+  "/applications/:id/status",
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.restrictToAdmin,
+  validateInput(updateLoanStatusSchema),
+  adminController.updateLoanStatus,
+)
 
 // Generate Application Token
-router.post('/applications/:id/token', 
-  authMiddleware.verifyToken,
-  authMiddleware.checkRole(['admin']),
-  adminController.generateApplicationToken
-);
+Adminrouter.post(
+  "/applications/:id/token",
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.restrictToAdmin,
+  adminController.generateApplicationToken,
+)
 
 // Dashboard Statistics
-router.get('/dashboard', 
-  authMiddleware.verifyToken,
-  authMiddleware.checkRole(['admin']),
-  adminController.getDashboardStatistics
-);
+Adminrouter.get(
+  "/dashboard",
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.restrictToAdmin,
+  adminController.getDashboardStatistics,
+)
 
-module.exports = router;
+export default Adminrouter
+

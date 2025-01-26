@@ -1,15 +1,25 @@
-// Database Configuration
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const connectDB = async () => {
-    try {
-      await mongoose.connect(process.env.MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        useCreateIndex: true,
-        useFindAndModify: false
-      });
-      console.log('MongoDB Connected Successfully');
-    } catch (error) {
-      console.error('MongoDB Connection Error:', error);
-      process.exit(1);
+  try {
+    const mongoURI = process.env.MONGODB_URI;
+    if (!mongoURI) {
+      throw new Error('MONGODB_URI is not defined in the environment variables');
     }
-  };
+
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    console.log('MongoDB Connected Successfully');
+  } catch (error) {
+    console.error('MongoDB Connection Error:', error.message);
+    process.exit(1);
+  }
+};
+
+export default connectDB;

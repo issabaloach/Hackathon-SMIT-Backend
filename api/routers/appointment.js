@@ -1,58 +1,54 @@
-import express from "express";
-const router = express.Router();
-import appointmentController from "../controllers/appointmentController";
-import authMiddleware from "../middleware/authMiddleware";
-import joi from "joi";
+import express from "express"
+import appointmentController from "../controllers/appointmentController.js"
+import AuthMiddleware from "../middleware/authentication.js"
+import validateInput from "../middleware/validation.js"
+import Joi from "joi"
+
+const Appointmentrouter = express.Router()
 
 // Generate Appointment Slip Validation Schema
 const generateAppointmentSlipSchema = Joi.object({
   loanId: Joi.string().required(),
-});
+})
 
 // Reschedule Appointment Validation Schema
 const rescheduleAppointmentSchema = Joi.object({
-  date: Joi.date().iso().required(),
+  date: Joi.date().iso().min("now").required(),
   time: Joi.string()
     .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
     .required(),
-});
+  reason: Joi.string().optional().max(500),
+})
 
 // Generate Appointment Slip
-router.post(
+Appointmentrouter.post(
   "/generate-slip",
-  authMiddleware.verifyToken,
-  authMiddleware.validateInput(generateAppointmentSlipSchema),
-  appointmentController.generateAppointmentSlip
-);
+  AuthMiddleware.verifyToken,
+  validateInput(generateAppointmentSlipSchema),
+  appointmentController.generateAppointmentSlip,
+)
 
 // Get User's Appointments
-router.get(
-  "/my-appointments",
-  authMiddleware.verifyToken,
-  appointmentController.getUserAppointments
-);
+Appointmentrouter.get("/my-appointments", AuthMiddleware.verifyToken, appointmentController.getUserAppointments)
 
 // Reschedule Appointment
-router.put(
+Appointmentrouter.put(
   "/:id/reschedule",
-  authMiddleware.verifyToken,
-  authMiddleware.validateInput(rescheduleAppointmentSchema),
-  appointmentController.rescheduleAppointment
-);
+  AuthMiddleware.verifyToken,
+  validateInput(rescheduleAppointmentSchema),
+  appointmentController.rescheduleAppointment,
+)
 
 // Cancel Appointment
-router.put(
-  "/:id/cancel",
-  authMiddleware.verifyToken,
-  appointmentController.cancelAppointment
-);
+Appointmentrouter.put("/:id/cancel", AuthMiddleware.verifyToken, appointmentController.cancelAppointment)
 
 // Admin: List All Appointments
-router.get(
+Appointmentrouter.get(
   "/list",
-  authMiddleware.verifyToken,
-  authMiddleware.checkRole(["admin"]),
-  appointmentController.listAppointments
-);
+  AuthMiddleware.verifyToken,
+  AuthMiddleware.restrictToAdmin,
+  appointmentController.listAppointments,
+)
 
-module.exports = router;
+export default Appointmentrouter
+
